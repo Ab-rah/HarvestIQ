@@ -1,0 +1,335 @@
+<!-- Fixed search results template -->
+<!-- Replace templates/knowledge_base/search_results.html with this -->
+
+{% extends 'base.html' %}
+
+{% block title %}Search Results - Knowledge Base{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h3>🔍 Enhanced Semantic Search</h3>
+                    <div class="d-flex align-items-center">
+                        {% if stats %}
+                            <small class="text-muted me-3">
+                                📊 {{ stats.total_chunks }} chunks | {{ stats.similarity_metric }} similarity
+                            </small>
+                        {% endif %}
+                        <form method="get" class="d-flex" style="width: 400px;">
+                            <input type="text" class="form-control me-2" name="q" 
+                                   placeholder="Search knowledge base..." value="{{ query }}">
+                            <input type="hidden" name="mode" value="{{ current_mode }}">
+                            <input type="hidden" name="min_similarity" value="{{ min_similarity }}">
+                            <button type="submit" class="btn btn-primary">Search</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                {% if query %}
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <p class="mb-2">
+                                <strong>Query:</strong> "{{ query }}" 
+                                {% if total_found %}
+                                    <span class="badge bg-success">{{ total_found }} result{{ total_found|pluralize }}</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <!-- Search Mode Selector -->
+                            <div class="btn-group btn-group-sm mb-2" role="group">
+                                {% for mode in search_modes %}
+                                    <a href="?q={{ query|urlencode }}&mode={{ mode }}&min_similarity={{ min_similarity }}" 
+                                       class="btn btn-{% if mode == current_mode %}primary{% else %}outline-primary{% endif %}">
+                                        {{ mode|title }}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                            
+                            <!-- Similarity Threshold -->
+                            <div class="mb-2">
+                                <label class="form-label-sm">Min Similarity: {{ min_similarity }}</label>
+                                <div class="btn-group btn-group-sm">
+                                    {% for threshold in similarity_thresholds %}
+                                        <a href="?q={{ query|urlencode }}&mode={{ current_mode }}&min_similarity={{ threshold }}" 
+                                           class="btn btn-{% if threshold == min_similarity %}success{% else %}outline-success{% endif %} btn-sm">
+                                            {{ threshold }}
+                                        </a>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                {% if error %}
+                    <div class="alert alert-danger">{{ error }}</div>
+                {% elif results %}
+                    {% for result in results %}
+                        <div class="card mb-3 search-result-card">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-lg-9">
+                                        <h5 class="card-title d-flex align-items-center">
+                                            <a href="{{ result.scraped_url.url }}" target="_blank" class="text-decoration-none me-2">
+                                                {{ result.scraped_url.title|default:"Untitled" }}
+                                            </a>
+                                            {% if result.scraped_url.structured_data.person %}
+                                                <span class="badge bg-info">👤 Person</span>
+                                            {% endif %}
+                                            {% if result.scraped_url.structured_data.company %}
+                                                <span class="badge bg-success">🏢 Company</span>
+                                            {% endif %}
+                                        </h5>
+                                        
+                                        <p class="text-muted mb-2">
+                                            <small>{{ result.scraped_url.url|truncatechars:80 }}</small>
+                                        </p>
+                                        
+                                        {% if result.scraped_url.meta_description %}
+                                            <p class="card-text">{{ result.scraped_url.meta_description|truncatechars:200 }}</p>
+                                        {% endif %}
+                                        
+                                        <!-- Enhanced Match Explanation -->
+                                        {% if result.match_explanation %}
+                                            <div class="alert alert-light py-2 mb-2">
+                                                <small><strong>🎯 Match Reason:</strong> {{ result.match_explanation }}</small>
+                                            </div>
+                                        {% endif %}
+                                        
+                                        <!-- Person Details (Enhanced) -->
+                                        {% if result.scraped_url.structured_data.person %}
+                                            <div class="structured-data mb-3">
+                                                <h6 class="text-primary mb-2">👤 Person Details:</h6>
+                                                <div class="row">
+                                                    {% if result.scraped_url.structured_data.person.names %}
+                                                        <div class="col-md-6">
+                                                            <strong>Names:</strong> 
+                                                            {% for name in result.scraped_url.structured_data.person.names %}
+                                                                <span class="badge bg-primary me-1">{{ name }}</span>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% endif %}
+                                                    {% if result.scraped_url.structured_data.person.titles %}
+                                                        <div class="col-md-6">
+                                                            <strong>Titles:</strong>
+                                                            {% for title in result.scraped_url.structured_data.person.titles %}
+                                                                <span class="badge bg-warning me-1">{{ title }}</span>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                                
+                                                {% if result.scraped_url.structured_data.person.bios %}
+                                                    <div class="mt-2">
+                                                        <strong>Bio Preview:</strong>
+                                                        <p class="text-muted mb-0">{{ result.scraped_url.structured_data.person.bios.0|truncatechars:150 }}</p>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+                                        
+                                        <!-- Company Details -->
+                                        {% if result.scraped_url.structured_data.company %}
+                                            <div class="structured-data mb-2">
+                                                <h6 class="text-success">🏢 Company:</h6>
+                                                <span class="badge bg-success">{{ result.scraped_url.structured_data.company.name }}</span>
+                                            </div>
+                                        {% endif %}
+                                        
+                                        <!-- Contact Information -->
+                                        {% if result.scraped_url.structured_data.contact %}
+                                            <div class="structured-data mb-2">
+                                                <h6 class="text-info">📞 Contact:</h6>
+                                                {% if result.scraped_url.structured_data.contact.emails %}
+                                                    <div>
+                                                        <strong>Emails:</strong>
+                                                        {% for email in result.scraped_url.structured_data.contact.emails %}
+                                                            <a href="mailto:{{ email }}" class="badge bg-info text-decoration-none me-1">{{ email }}</a>
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                                {% if result.scraped_url.structured_data.contact.phones %}
+                                                    <div class="mt-1">
+                                                        <strong>Phones:</strong>
+                                                        {% for phone in result.scraped_url.structured_data.contact.phones %}
+                                                            <span class="badge bg-secondary me-1">{{ phone }}</span>
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Enhanced Similarity Scores -->
+                                    <div class="col-lg-3 text-end">
+                                        <div class="mb-3">
+                                            <h6 class="text-primary mb-1">📈 Similarity Scores</h6>
+                                            
+                                            <!-- Cosine Similarity -->
+                                            <div class="mb-2">
+                                                <small class="text-muted d-block">Cosine Similarity</small>
+                                                <div class="progress" style="height: 20px;">
+                                                    <div class="progress-bar bg-primary" 
+                                                         style="width: {% widthratio result.cosine_similarity 1 100 %}%">
+                                                        {{ result.cosine_similarity|floatformat:3 }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Relevance Score -->
+                                            {% if result.relevance_score %}
+                                                <div class="mb-2">
+                                                    <small class="text-muted d-block">Relevance Score</small>
+                                                    <div class="progress" style="height: 20px;">
+                                                        <div class="progress-bar bg-success" 
+                                                             style="width: {% widthratio result.relevance_score 1 100 %}%">
+                                                            {{ result.relevance_score|floatformat:3 }}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                            
+                                            <!-- Hybrid Score -->
+                                            {% if result.hybrid_score %}
+                                                <div class="mb-2">
+                                                    <small class="text-muted d-block">Hybrid Score</small>
+                                                    <div class="progress" style="height: 20px;">
+                                                        <div class="progress-bar bg-warning" 
+                                                             style="width: {% widthratio result.hybrid_score 1 100 %}%">
+                                                            {{ result.hybrid_score|floatformat:3 }}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <div class="mt-3">
+                                            <span class="badge bg-{% if result.scraped_url.scraping_status == 'success' %}success{% else %}secondary{% endif %} mb-2">
+                                                {{ result.scraped_url.scraping_status|title }}
+                                            </span>
+                                            
+                                            {% if result.scraped_url.scraped_at %}
+                                                <div class="mt-2">
+                                                    <small class="text-muted d-block">Scraped</small>
+                                                    <small class="text-muted">{{ result.scraped_url.scraped_at|date:"M d, Y" }}</small>
+                                                </div>
+                                            {% endif %}
+                                            
+                                            {% if result.scraped_url.vectorized %}
+                                                <div class="mt-1">
+                                                    <span class="badge bg-info">🧠 Vectorized</span>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    
+                    <!-- Search Tips -->
+                    <div class="alert alert-info mt-4">
+                        <h6>🔍 Search Tips:</h6>
+                        <ul class="mb-0">
+                            <li><strong>Hybrid Mode:</strong> Best overall results combining similarity + relevance</li>
+                            <li><strong>Similarity Mode:</strong> Pure cosine similarity matching</li>
+                            <li><strong>Relevance Mode:</strong> Keyword + content quality boosted</li>
+                            <li><strong>Try queries like:</strong> "CEO tech company", "executive biography", "leadership team"</li>
+                        </ul>
+                    </div>
+                    
+                {% elif query %}
+                    <div class="text-center py-5">
+                        <h4 class="text-muted mb-3">🔍 No Results Found</h4>
+                        <p class="text-muted">No results found for "{{ query }}" with similarity threshold {{ min_similarity }}</p>
+                        <div class="mt-3">
+                            <p><strong>Try:</strong></p>
+                            <div class="btn-group">
+                                <a href="?q={{ query|urlencode }}&mode={{ current_mode }}&min_similarity=0.2" 
+                                   class="btn btn-outline-primary">Lower Threshold (0.2)</a>
+                                <a href="?q={{ query|urlencode }}&mode=hybrid&min_similarity={{ min_similarity }}" 
+                                   class="btn btn-outline-success">Hybrid Mode</a>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <p class="text-muted">
+                                <strong>Sample queries:</strong> "CEO", "executive team", "technology director", "company leadership"
+                            </p>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <h4 class="text-muted mb-3">🎯 Enhanced Semantic Search</h4>
+                        <p class="text-muted">Enter a search query to find relevant content with cosine similarity matching.</p>
+                        <div class="mt-3">
+                            <h6>✨ Features:</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="card border-light">
+                                        <div class="card-body text-center">
+                                            <h5>🎯 Cosine Similarity</h5>
+                                            <p class="text-muted small">Advanced semantic matching for better relevance</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card border-light">
+                                        <div class="card-body text-center">
+                                            <h5>🔍 Multiple Modes</h5>
+                                            <p class="text-muted small">Hybrid, similarity, and relevance ranking</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card border-light">
+                                        <div class="card-body text-center">
+                                            <h5>📊 Smart Ranking</h5>
+                                            <p class="text-muted small">Executive content boosting and quality scoring</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.structured-data {
+    background-color: #f8f9fa;
+    border-left: 4px solid #007bff;
+    padding: 15px;
+    border-radius: 4px;
+}
+
+.search-result-card {
+    transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+.search-result-card:hover {
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.progress {
+    border-radius: 10px;
+}
+
+.badge {
+    font-size: 0.75rem;
+}
+
+.card-title a:hover {
+    text-decoration: underline !important;
+}
+</style>
+{% endblock %}

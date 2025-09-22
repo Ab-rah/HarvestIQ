@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block title %}Upload Status - Knowledge Base{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3>📤 Upload Status</h3>
+                {% if can_process %}
+                    <form method="post" action="{% url 'process_urls' csv_upload.id %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success btn-lg" 
+                                onclick="return confirm('Start processing all pending URLs?')">
+                            🚀 Process URLs
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <h5>{{ csv_upload.file.name }}</h5>
+                <p class="text-muted">Uploaded: {{ csv_upload.uploaded_at|date:"F d, Y H:i" }}</p>
+                
+                <div class="progress mb-3" style="height: 30px;">
+                    <div class="progress-bar {% if csv_upload.processed %}bg-success{% else %}bg-primary{% endif %}" 
+                         role="progressbar" style="width: {{ progress_percent }}%">
+                        {{ csv_upload.processed_urls }}/{{ csv_upload.total_urls }} URLs processed
+                    </div>
+                </div>
+                
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <h4 class="text-primary">{{ csv_upload.total_urls }}</h4>
+                        <small>Total URLs</small>
+                    </div>
+                    <div class="col-md-3">
+                        <h4 class="text-success">{{ csv_upload.scraped_urls.success.count }}</h4>
+                        <small>Successful</small>
+                    </div>
+                    <div class="col-md-3">
+                        <h4 class="text-danger">{{ csv_upload.scraped_urls.failed.count }}</h4>
+                        <small>Failed</small>
+                    </div>
+                    <div class="col-md-3">
+                        <h4 class="text-warning">{{ csv_upload.scraped_urls.pending.count }}</h4>
+                        <small>Pending</small>
+                    </div>
+                </div>
+                
+                {% if csv_upload.processed %}
+                    <div class="alert alert-success mt-3">
+                        <strong>✅ Processing Complete!</strong> 
+                        All URLs have been processed and added to the knowledge base.
+                        <a href="{% url 'search' %}" class="btn btn-success btn-sm ms-2">Search Knowledge Base</a>
+                    </div>
+                {% elif can_process %}
+                    <div class="alert alert-info mt-3">
+                        <strong>ℹ️ Ready to Process</strong> 
+                        Click the "Process URLs" button above to start scraping the URLs.
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning mt-3">
+                        <strong>⏳ No Pending URLs</strong> 
+                        All URLs have been processed or are currently being processed.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>🔗 Recent URLs</h5>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                {% for url in csv_upload.scraped_urls.all|slice:":10" %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div style="flex: 1; min-width: 0;">
+                            <small class="text-truncate d-block">{{ url.url|truncatechars:40 }}</small>
+                            {% if url.title %}
+                                <strong class="text-truncate d-block">{{ url.title|truncatechars:30 }}</strong>
+                            {% endif %}
+                        </div>
+                        <span class="badge bg-{% if url.scraping_status == 'success' %}success{% elif url.scraping_status == 'failed' %}danger{% elif url.scraping_status == 'processing' %}warning{% else %}secondary{% endif %} ms-2">
+                            {{ url.scraping_status|title }}
+                        </span>
+                    </div>
+                    <hr>
+                {% empty %}
+                    <p class="text-muted">No URLs found.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if csv_upload.scraped_urls.processing.exists %}
+<script>
+    // Auto-refresh if URLs are currently being processed
+    setTimeout(function() {
+        location.reload();
+    }, 5000);
+</script>
+{% endif %}
+{% endblock %}

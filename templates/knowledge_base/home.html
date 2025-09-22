@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block title %}HarvestIQ{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h3>🗀 Upload CSV File</h3>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'upload_csv' %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="csv_file" class="form-label">CSV/Excel File with URLs</label>
+                        <input type="file" class="form-control" id="csv_file" name="csv_file" 
+                               accept=".csv,.xlsx,.xls" required>
+                        <div class="form-text">
+                            Upload a CSV or Excel file containing URLs. The system will automatically 
+                            detect URL columns or use the first column.
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">📤 Upload & Process</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3>🔍 Search Knowledge Base</h3>
+            </div>
+            <div class="card-body">
+                <form method="get" action="{% url 'search' %}">
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="q" 
+                               placeholder="Search for executives, companies, roles, or any content..." 
+                               value="{{ request.GET.q }}">
+                        <button type="submit" class="btn btn-success">Search</button>
+                    </div>
+                </form>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        Try searching for: "CEO", "executive", "technology company", "director", etc.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>📈 Recent Uploads</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_uploads %}
+                    {% for upload in recent_uploads %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <small class="text-muted">{{ upload.uploaded_at|date:"M d, H:i" }}</small><br>
+                                <strong>{{ upload.file.name|truncatechars:20 }}</strong>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-{% if upload.processed %}success{% else %}warning{% endif %}">
+                                    {{ upload.processed_urls }}/{{ upload.total_urls }}
+                                </span>
+                                <br>
+                                <a href="{% url 'upload_status' upload.id %}" class="btn btn-sm btn-outline-primary">View</a>
+                            </div>
+                        </div>
+                        <hr>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No uploads yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
